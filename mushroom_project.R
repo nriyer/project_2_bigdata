@@ -51,7 +51,16 @@ cluster$vtype <- NULL
 row <- nrow(cluster)
 col <- col(cluster)
 set.seed(12345)
-##train and test set
+
+##train and test at 50-50 split
+
+
+
+##train and test at 60-40 split
+
+
+
+##train and test set at 70-30 split
 trainindex <- sample(row, 0.7*row, replace=FALSE)
 train <- cluster[trainindex,]
 test <- cluster[-trainindex,]
@@ -123,7 +132,7 @@ kmeans_iyer <- function(df,k,n=20){
 library(NbClust)
 #First use preprocessed range 0-1 data set:
 
-#TRAIN MODEL using TRAINING SCALED BY 'RANGE'
+#TRAIN MODEL using TRAINING SCALED BY 'RANGE' and 70-30 train/test set
 train_processed <- as.matrix(train_processed)
 #function to find optimal number of clusters (takes too long)
 km.numcluster <- NbClust(train_processed, method = 'kmeans', min.nc=2,max.nc=12)
@@ -137,7 +146,11 @@ wss_and_bss(train_processed)
 #you want larger sum of squares between and within since this will make more distinct clusters
 
 set.seed(12345)
+
 #Kmeans for 5 clusters 
+
+#70-30 train/test
+##TRAIN
 kmeans_iyer(train_processed,5)
 check_5clusters <- cluster_assignment[which(cluster_assignment$cshape == .4),c(1,2,22)]
 #output of number of points per cluster
