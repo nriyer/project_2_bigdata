@@ -72,11 +72,10 @@ head(mr)
 ## CHANGE ALPHA VARS TO NUMERIC    ##
 #####################################
 numeric <- mr
+numeric[numeric == '?'] <- NA ##Protect the null values
+numeric <- sapply(numeric, as.numeric)
 #this translates column from factor to number
 #loop to translate all to factors
-for (i in names(numeric)){
-  numeric[,i] <- as.numeric(numeric[,i])
-}
 str(numeric)
 summary(numeric)
 
@@ -161,59 +160,36 @@ qplot(variable, color=value, data=melt.mr, geom='density')
 #############################################################################################
 ## Try data reduction to eliminate some attributes through Principal Components Analysis.  ##
 #############################################################################################
+#####################################################
+# remove variables with zero or near-zero variance  #
+#####################################################
+
+nzv <- nearZeroVar(numeric, saveMetrics = TRUE)
+## only keep those columns that significant variance
+mr_nzv <- numeric[,c(rownames(nzv[nzv$nzv == FALSE,]))]
+
+
+
 #################################
 # Principal Component Analysis  #
 #################################
 
-head(numeric)
-str(numeric)
-dim(numeric)
-summary(numeric)
-numeric <- subset(numeric, select = -c(class) )
-PCA1 <- PCA(numeric, scale.unit = TRUE, ncp = 22, graph = TRUE,quali.sup=16 )
-#we made all the variables numeric except that variable that only had one option, veiltype 
-PCA1
-PCA1$eig
-PCA1$var
-summary(PCA1) #we want components 1 - 6 because they have a eigenvalue of 1 and above 
-dimdesc(PCA1, axes = 1:6) # to see which variables make an impact on the dimensions 
-var(numeric)
-myvars1 <- c("sporeprintcolor","gillsize", "odor", "stalkshape", "stalkroot", "bruises", "gillcolor", "ringtype", "stalkcolorabovering","stalkcolorbelowring", "gillspacing", "population", "gillattachment", "veilcolor", "ringnumber", "habitat")
-mush1 <- numeric[myvars1]
-dim(mush1)
-str(mush1)
-##16 variables
 
+mr_omit <- na.omit(mr_nzv)
+mr_nzv <- subset( mr_omit, select = -c(class) )
+pr <- prcomp( mr_omit, center=T, scale.=T)
 
-PCA2 <- PCA(numeric, scale.unit = TRUE, ncp = 22, graph = TRUE)
-PCA2
-PCA2$eig #will use components 1-7 
-PCA2$var
-summary(PCA2) # 
-dimdesc(PCA2, axes = 1:7)
-PCA2$var$contrib
-PCA2$call
-PCA2$ind
-PCA2$ind$contrib
-myvars2 <- c("sporeprintcolor","gillsize", "odor", "stalkshape","bruises","stalkroot", "gillcolor", "ringtype", "stalksurfaceabovering", "stalksurfacebelowring", "gillspacing", "population", "gillattachment","veilcolor", "habitat", "ringnumber", "capshape")
-mush2 <- numeric[myvars2]
-dim(mush2)
-#17 variables
+cs <- cumsum(pr$sdev/sum(pr$sdev))
+## take the first n components that account for 90%
+## of the variance in this model
+index <- max(which(cs < 0.9))
+mr.t <- pr$x[,1:index]
+mr.t <- as.data.frame(mr.t)
 
-summary(numeric)
-#made all variables with two values categorical
-PCA3 <- PCA(numeric, scale.unit = TRUE, ncp = 22, graph = TRUE,quali.sup=(c(4,6,7,8,10,16)))
-summary(PCA3)
-PCA3$eig #will use components 1-6
-dimdesc(PCA3, axes = 1:6)
-myvars3 <- c("ringtype","gillcolor", "stalkroot", "bruises","odor", 
-             "gillsize", "sporeprintcolor","stalksurfaceabovering",
-             "stalksurfacebelowring","stalkcolorbelowring","stalkcolorabovering",
-             "gillspacing","capcolor","population", "stalkshape","habitat","ringnumber",
-             "capsurface","veilcolor","gillattachment")
-mush3 <- numeric[myvars3]
-dim(mush3)
-#20 variables
+## plot that shows how nice this transformation is
+library(car)
+f <- as.factor(mr_omit[,1])
+scatter3d(mr.t[,1],mr.t[,2],mr.t[,3], surface = FALSE, groups = f)
 
 ######################################
 # INITIAL CLUSTERING - WITH CLASS    #
@@ -274,7 +250,7 @@ kmeans_iyer(test_initial,4)
 #using mush3
 
 #take out target var and turn rest into numeric for clustering
-cluster <- mush3
+cluster <- mr.t
 #cluster <- mush1[,-1]
 #no variance in vtype
 cluster$vtype <- NULL
@@ -556,7 +532,5 @@ knn_pred
 CrossTable(x = knn.testLabels, y = knn_pred, prop.chisq=FALSE)
 #true negative/true positive = model score
 #1292/1311 = .9855
-
-
 
 
