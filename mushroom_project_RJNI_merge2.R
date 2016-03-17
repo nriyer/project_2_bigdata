@@ -52,7 +52,7 @@ kmeans_iyer <- function(df,k,n=20){
   #append cluster assignment
   cluster_assignment <- data.frame(df, fit$cluster)
   #table of how many variables fit in each cluster
-  print(table(fit$cluster))
+  #print(table(fit$cluster))
   km.out<- kmeans(cluster_assignment,k,nstart=n)
   print(km.out$tot.withinss)
   print(km.out$betweenss)
@@ -175,20 +175,18 @@ mr_nzv <- numeric[,c(rownames(nzv[nzv$nzv == FALSE,]))]
 #################################
 
 
-mr_omit <- na.omit(mr_nzv)
-mr_nzv <- subset( mr_omit, select = -c(class) )
-pr <- prcomp( mr_omit, center=T, scale.=T)
+mr_nzv <- subset( mr_nzv, select = -c(class) )
+pr <- PCA( mr_nzv, ncp = dim(mr_nzv)[2])
 
-cs <- cumsum(pr$sdev/sum(pr$sdev))
-## take the first n components that account for 90%
-## of the variance in this model
-index <- max(which(cs < 0.9))
-mr.t <- pr$x[,1:index]
+## take the first components that have
+## eigenvalues greater than 1
+index <- max(which(pr$eig$eigenvalue > 1))
+mr.t <- pr$ind$coord[,1:index]
 mr.t <- as.data.frame(mr.t)
 
 ## plot that shows how nice this transformation is
 library(car)
-f <- as.factor(mr_omit[,1])
+f <- as.factor(numeric[,1])
 scatter3d(mr.t[,1],mr.t[,2],mr.t[,3], surface = FALSE, groups = f)
 
 ######################################
@@ -247,7 +245,6 @@ kmeans_iyer(test_initial,4)
 ## other with number of points per cluster                                 ##
 #############################################################################
 
-#using mush3
 
 #take out target var and turn rest into numeric for clustering
 cluster <- mr.t
@@ -301,43 +298,44 @@ wss_and_bss(train1)
 #optimal looks like 4 clusters. Will use K=4, K=5 and K=7
 
 set.seed(12345)
-#K=4
-kmeans_iyer(train1,4)
+#K=3
+kmeans_iyer(train1,3)
 
-#K-means clustering with 4 clusters of sizes 914, 1037, 1052, 1059
-#Within cluster sum of squares by cluster:
-#  [1] 147.2922 206.5798 944.4668 738.4934
-#(between_SS / total_SS =  79.4 %)
+#K-means clustering with 4 clusters of sizes 1436, 863, 1763
+# Within cluster sum of squares by cluster:
+# [1] 8033.1858  473.2955 4839.9445
+# (between_SS / total_SS =  41.3 %)
 
 kmeans_iyer(test1,4)
-#Within cluster sum of squares by cluster:
-#  [1]  530.7143  192.7036 1048.5809  144.2148
-#(between_SS / total_SS =  80.7 %)
+# Within cluster sum of squares by cluster:
+#   [1] 1804.6730 6733.1266  898.5788  712.2011
+# (between_SS / total_SS =  58.4 %)
 
 #K=5
 kmeans_iyer(train1,5)
-#K-means clustering with 5 clusters of sizes 325, 643, 792, 1037, 1265
+#K-means clustering with 5 clusters of sizes 1277, 715, 338, 775, 957
 
-#Within cluster sum of squares by cluster:
-#  [1] 147.4262 365.3925 383.6681 206.5798 491.7910
-#(between_SS / total_SS =  86.7 %)
+# Within cluster sum of squares by cluster:
+#   [1] 3881.9698  749.3130  758.7224 1079.6333  630.6668
+# (between_SS / total_SS =  75.3 %)
+
 
 kmeans_iyer(test1,5)
-#Within cluster sum of squares by cluster:
-#  [1] 666.09769 192.70358 144.21480 321.24278  35.41523
-#(between_SS / total_SS =  89.3 %)
+# Within cluster sum of squares by cluster:
+#   [1] 1804.7616 1187.0728 1046.9565  712.2011 2310.7929
+# (between_SS / total_SS =  75.4 %)
 
 #K=7
 kmeans_iyer(train1,7)
-#K-means clustering with 7 clusters of sizes 249, 297, 1037, 689, 282, 517, 991
-#Within cluster sum of squares by cluster:
-#  [1] 113.310071   2.319865 206.579776 219.178457 115.542778 237.388719 650.747341
-#(between_SS / total_SS =  92.4 %)
+#K-means clustering with 7 clusters of sizes 453, 532, 666, 325, 854, 857, 375
+# Within cluster sum of squares by cluster:
+#   [1] 611.5559 453.6008 630.8959 709.4998 442.2659 374.6532 284.5403
+# (between_SS / total_SS =  90.4 %)
 
 kmeans_iyer(test1,7)
-#Within cluster sum of squares by cluster:
-#  [1] 144.2148048  85.9124272   0.5967213  16.9074503 954.5352683 192.4212013  35.4152284
-#(between_SS / total_SS =  93.7 %)
+# Within cluster sum of squares by cluster:
+#   [1] 350.8962 498.7762 503.0216 469.8624 632.9195 417.7128 638.1423
+# (between_SS / total_SS =  90.9 %)
 
 ###7 does the best but could be overfitting also may have something to do with 50-50 split
 
@@ -357,44 +355,43 @@ wss_and_bss(train2)
 #optimal looks like 4 clusters. Will use K=4, K=5 and K=7
 
 set.seed(12345)
-#K=4
-kmeans_iyer(train2,4)
+#K=3
+kmeans_iyer(train2,3)
 
-#K-means clustering with 4 clusters of sizes 780, 1527, 1298, 1269
-#Within cluster sum of squares by cluster:
-#  [1] 420.6765 616.2767 243.3934 836.7560
-#(between_SS / total_SS =  82.7 %)
+#K-means clustering with 4 clusters of sizes 1618, 2228, 1028
+# Within cluster sum of squares by cluster:
+# [1] 9105.5893 6409.5309  549.7098
+# (between_SS / total_SS =  42.9 %)
 
-kmeans_iyer(test2,4)
-#Within cluster sum of squares by cluster:
-#  [1] 322.1445 156.1216 267.2515 854.9291
-#(between_SS / total_SS =  81.1 %)
+kmeans_iyer(test2,3)
+# Within cluster sum of squares by cluster:
+# [1] 3294.8793 7193.6698  426.3172
+# (between_SS / total_SS =  39.1 %)
 
 #K=5
 kmeans_iyer(train2,5)
-#K-means clustering with 5 clusters of sizes 439, 1298, 1265, 780, 1092
+#K-means clustering with 5 clusters of sizes 869, 1217, 814, 1035, 939
 
-#Within cluster sum of squares by cluster:
-#  [1]  39.31298 243.39336 482.64913 420.67647 590.09397
-#(between_SS / total_SS =  88.3 %)
+# Within cluster sum of squares by cluster:
+#   [1] 4944.5984  819.5048  870.6196  571.8846 1285.0629
+# (between_SS / total_SS =  74.4 %)
 
 kmeans_iyer(test2,5)
-#Within cluster sum of squares by cluster:
-#  [1] 418.8588 156.1216 343.2002 333.3569 123.3989
-#(between_SS / total_SS =  81.4 %)
+# Within cluster sum of squares by cluster:
+#   [1]  305.3508  712.1916  625.1542  400.0601 3840.9398
+# (between_SS / total_SS =  75.0 %)
 
 #K=7
 kmeans_iyer(train2,7)
-#K-means clustering with 7 clusters of sizes 740, 786, 1298, 792, 785, 348, 125
-#Within cluster sum of squares by cluster:
-#  [1] 420.67647 877.56689  26.82659 168.18897 150.10988 234.09223  84.79622
-#(between_SS / total_SS =  89.4 %)
+#K-means clustering with 7 clusters of sizes 816, 990, 714, 382, 445, 341, 1186
+# Within cluster sum of squares by cluster:
+#   [1]  876.00502 1488.07158  671.03950  849.68993  368.34202   69.32215  704.29210
+# (between_SS / total_SS =  86.5 %)
 
 kmeans_iyer(test2,7)
 #Within cluster sum of squares by cluster:
-#  [1]  56.24304  29.34711 175.51366 108.94868 571.43948 144.53867  11.80223
-#(between_SS / total_SS =  92.6 %)
-
+# [1] 352.3810 472.7462 501.5998 396.1190 529.1403 309.3507 274.8304
+# (between_SS / total_SS =  90.5 %)
 ###7 does the best again..
 
 ####################
@@ -416,43 +413,43 @@ set.seed(12345)
 #K=3
 kmeans_iyer(train3,3)
 
-#K-means clustering with 3 clusters of sizes 1813, 2245, 1628
-#Within cluster sum of squares by cluster:
-#  [1]  736.2414 1159.5432 1326.1124
-#(between_SS / total_SS =  68.8 %)
+#K-means clustering with 3 clusters of sizes 957, 1203, 3526
+# Within cluster sum of squares by cluster:
+#   [1]  1012.8757   666.3672 17173.1493
+# (between_SS / total_SS =  41.5 %)
 
 
 kmeans_iyer(test3,3)
-#Within cluster sum of squares by cluster:
-#  [1] 323.6217 883.0550 128.3807
-#(between_SS / total_SS =  71.8 %)
+# Within cluster sum of squares by cluster:
+#   [1] 7198.9749  328.5411  424.3353
+# (between_SS / total_SS =  41.5 %)
 
 #K=5
 kmeans_iyer(train3,5)
-#K-means clustering with 5 clusters of sizes 1494, 1267, 920, 546, 1459
+#K-means clustering with 5 clusters of sizes 1209, 975, 2516, 553, 433
 
-#Within cluster sum of squares by cluster:
-#  [1] 982.39573 463.55884 494.30731  49.13407 271.11248
-#(between_SS / total_SS =  86.3 %)
+# Within cluster sum of squares by cluster:
+#   [1]  685.2579 1150.2749 6862.6231  467.2397  978.9314
+# (between_SS / total_SS =  75.0 %)
 
 kmeans_iyer(test3,5)
-#Within cluster sum of squares by cluster:
-#  [1]  19.96541 883.05502  79.31403  96.84709  19.46909
-#(between_SS / total_SS =  86.4 %)
+# Within cluster sum of squares by cluster:
+#   [1]  377.9383  319.0392  403.2486  186.4270 2828.9784
+# (between_SS / total_SS =  75.2 %)
 
 
 #K=7
 kmeans_iyer(train3,7)
-#K-means clustering with 7 clusters of sizes 625, 1056, 1813, 550, 620, 618, 404
+#K-means clustering with 7 clusters of sizes 426, 1200, 1229, 906, 805, 555, 565
 
 #Within cluster sum of squares by cluster:
-#  [1] 115.5974 184.9974 736.2414 539.3484 383.2925 178.7366 168.3513
-#(between_SS / total_SS =  91.9 %)
+# [1] 954.5145 661.5366 545.6186 874.6575 679.6864 477.9926 721.8379
+# (between_SS / total_SS =  90.0 %)
 
 kmeans_iyer(test3,7)
 #Within cluster sum of squares by cluster:
-#  [1]  19.96541  86.43939 145.47685  96.84709  11.95376 193.64401 130.62864
-#(between_SS / total_SS =  93.8 %)
+# [1] 242.2359 399.5511 347.7086 387.1052 170.7704 260.8635 298.3935
+# (between_SS / total_SS =  90.9 %)
 
 #7 clusters does the best. Try 7 clusters with all 3 PCA sets??:
 
