@@ -102,6 +102,14 @@ trainindex <- sample(row, 0.7*row, replace=FALSE)
 train_initial <- initial[trainindex,]
 test_initial <- initial[-trainindex,]
 dim(train_initial)
+str(train_initial)
+
+wss <- (nrow(train_initial)-1)*sum(apply(train_initial,2,var))
+for (i in 1:12) wss[i] <- sum(kmeans(train_initial, 
+                                     centers=i)$withinss)
+print(plot(1:12, wss, type="b", xlab="Number of Clusters",
+           ylab="Within groups sum of squares"))
+
 ##plot wss and bss
 wss_and_bss(train_initial)
 ## optimum number here is 4 clusters
@@ -181,6 +189,9 @@ cluster$vtype <- NULL
 row <- nrow(cluster)
 col <- col(cluster)
 set.seed(12345)
+
+row1 <- nrow(cluster2)
+col1 <- col(cluster2)
 
 ##train and test at 50-50 split
 trainindex <- sample(row, 0.5*row, replace=FALSE)
