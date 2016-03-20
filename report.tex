@@ -1,0 +1,378 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{multicol}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{amsrefs}
+\usepackage{mathtools}
+\usepackage{dsfont}
+\usepackage{fullpage}
+\usepackage{enumerate}
+\usepackage{mathrsfs}
+\usepackage{multirow}
+
+\usepackage{stmaryrd}
+\usepackage{listings}
+\usepackage[all]{xy}
+\usepackage[mathcal]{eucal}
+\usepackage{verbatim}  %%includes comment environment
+\newcommand{\N}{\mathbb N}
+\newcommand{\Z}{\mathbb Z}
+\newcommand{\C}{\mathbb C}
+\newcommand{\Q}{\mathbb Q}
+\newcommand{\R}{\mathbb R}
+\newcommand{\nc}{\newcommand}
+\nc{\M}{\mathrm{M}}
+\nc{\spec}{\mathrm{Spec}}
+\nc{\Hom}{\mathrm{Hom}}
+\nc{\rad}{\mathrm{rad}}
+\nc{\up}{\upsilon}
+\nc{\units}{^{\times}}
+\nc{\inv}{^{-1}}
+\nc{\ba}{\overline{A}}
+\nc{\bb}{\overline{B}}
+\nc{\bc}{\overline{C}}
+\nc{\sm}{\sum_{n=0}^\infty}
+\nc{\smn}{\sum_{n\geq N}^\infty}
+\nc{\smm}{\sum_{n\geq M}^\infty}
+\nc{\vphi}{\varphi}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{lemma}{Lemma}[theorem]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{definition}{Definition}
+\allowdisplaybreaks
+
+%absolute value function
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}
+\DeclarePairedDelimiter\norm{\|}{\|}
+
+\usepackage [autostyle, english = american]{csquotes}
+\MakeOuterQuote{"}
+
+
+
+
+
+
+
+
+
+
+
+
+\title{Project 2 - Mushroom Dataset}
+
+\author{Nisha Iyer, Rachel Jordan, Samuel Dooley}
+
+\date{March 20, 2016}
+
+
+
+
+\begin{document}
+\maketitle
+
+\section{Intro}
+
+The purpose of this write up is to discuss the work levied against discovering the set of `unsure' mushrooms. The dataset \texttt{agaricus-lepiota} was given to us to analyze. This dataset had 22 variables and 8124 observations such that each observation was labeled edible or poisonous. Within the class of poisonous mushrooms, there is a smaller subset of mushrooms whose edibility are unsure, but were labeled poisonous. What follows is a discussion of our team's effort to discover this susbclass. 
+
+\section{Dataset Familiarization}
+
+As stated above, the dataset includes many observations of 22-dimensional data. There is a 23rd dimension that determines the mushroom's class. The variables are listed here:
+
+ \begin{multicols}{3}
+\begin{itemize}
+    \item \texttt{ capshape }
+    \item \texttt{ capsurface }
+    \item \texttt{ capcolor }
+    \item \texttt{ bruises }
+    \item \texttt{ odor }
+    \item \texttt{ gillattachment }
+    \item \texttt{ gillspacing }
+    \item \texttt{ gillsize }
+    \item \texttt{ gillcolor }
+    \item \texttt{ stalkshape }
+    \item \texttt{ stalkroot }
+    \item \texttt{ stalksurfaceabovering }
+    \item \texttt{ stalksurfacebelowring }
+    \item \texttt{ stalkcolorabovering }
+    \item \texttt{ stalkcolorbelowring }
+    \item \texttt{ veiltype }
+    \item \texttt{ veilcolor }
+    \item \texttt{ ringnumber }
+    \item \texttt{ ringtype }
+    \item \texttt{ sporeprintcolor }
+    \item \texttt{ population }
+    \item \texttt{ habitat }
+\end{itemize}
+\end{multicols}
+
+So let us first import the data and give the data variables names:
+
+\begin{lstlisting}[language=R, frame=single]
+mr <- read.table('agaricus-lepiota.data',sep=",",header=FALSE)
+names(mr) <- c("class", "capshape", "capsurface", "capcolor","bruises",
+                "odor","gillattachment","gillspacing","gillsize","gillcolor",
+                "stalkshape","stalkroot","stalksurfaceabovering",
+                "stalksurfacebelowring","stalkcolorabovering",
+                "stalkcolorbelowring","veiltype", "veilcolor","ringnumber",
+                "ringtype","sporeprintcolor","population","habitat")
+    
+\end{lstlisting}
+
+The data in each of these variables above is categorical with the most category each variable can take being twelve in the variable \texttt{gillcolor}. So let us convert these data to numerical values, retaining NA values, and scaling to values between 0 and 1:
+
+\begin{lstlisting}[language=R, frame=single]
+numeric <- mr
+numeric[numeric == '?'] <- NA ##Protect the null values
+numeric <- as.data.frame(sapply(numeric, as.numeric))
+
+numeric <- numeric-1
+numeric <- scale(numeric)
+\end{lstlisting}
+
+We now try to get an understanding of the data themselves. First, we can do that through statistics on the dataset:
+
+\begin{lstlisting}[language=R, frame = single]
+summary(numeric) #entire dataset
+
+edible <- numeric[which(numeric[,1] == 0),]
+poisonous <- numeric[which(numeric[,1] == 1),]
+summary(edible) #just edible ones
+summary(poisonous) # just poisonous ones
+\end{lstlisting}
+
+\noindent which upon examining the values reveals that the following variables have large enough difference between the poisonous and the edible samples to examine further: \texttt{capsurface, bruises, odor, gillsize gillcolor, stalkroot, stalksurfacebelowring, stalkcolorabovering, stalkcolorbelowring, ringtype, sporeprintcolor, population, habitat}. 
+
+We can also analyze the variance of these variables and ignore those variables that have zero, or near zero variance.
+\begin{lstlisting}[language=R, frame=single]
+nzv <- nearZeroVar(numeric, saveMetrics = TRUE)
+## only keep those columns that significant variance
+mr_nzv <- numeric[,c(rownames(nzv[nzv$nzv == FALSE,]))]
+\end{lstlisting}
+
+We also want to visualize these data, and so we use some plots to do just that. (In the attached \texttt{R} file, we have more plots, but here are just a couple.)
+
+\subsection{Plots}
+Below is an example of univariate plots and correlation of four variables, \texttt{odor, gillattachment, gillspacing, and gillsize}. We have plots for each sample, the entire dataset, just the edible ones, and just the poisonous ones.
+
+\noindent
+\includegraphics[scale=0.35]{entireggplot}
+\includegraphics[scale=0.35]{edibleggplot}
+\includegraphics[scale=0.35]{poisonousggplot}
+
+We can also make plots that reveal something about proportions of each category in each class, edible or poisonous. The below show plots for a given variable that display each category that variable can take. The widths of the bars are proportional to the amount of that category in the sample. The bar is then filled in with black representing edible and grey representing poisonous. This fill of each bar is proportional to the break out of that that variable when separated by poisonous and edible. 
+
+\noindent
+\begin{center}
+\quad\includegraphics[scale=0.35]{sillyplot}\quad
+\includegraphics[scale=0.35]{complicatedplot}
+\end{center}
+
+The left plot reveals that the variable, \texttt{veiltype} only has one category and that it is split between the two classes edible and poisonous in relationship to the proportion of each class in the sample. The right plot show that some variable can have many different categories with various break-outs of those variables. This plot also reveals that even some categories are entirely filled by one class. For instance, the category `g' is only take by the edible mushrooms.
+
+We can even take the regular scatterplot. The left scatterplot is a two-dimensional view of the first two, non-class variables, \texttt{capshape} and \texttt{capsurface}. The right is a three-dimensional view of the first three, non-class variables, \texttt{capshape}, \texttt{capsurface}, and \texttt{capcolor}. The green corresponds to those that are edible and the green are poisonous.
+
+
+\begin{center}
+\quad\includegraphics[scale=0.35]{2dplot}\quad
+\includegraphics[scale=0.5]{3dplot}
+\end{center}
+
+We can obviously tell that these types of plots are not very useful. Since these data are categorical, the dots `lie' on top of each other when graphed. Thus, we will stay away from basic scatter plots for categorical data. 
+
+
+\section{Dimension Reduction with PCA}
+
+We now want to reduce the number of variables that we are analyzing. As stated above, there are 22 variables, not including the one that stipulates whether the mushroom is edible or poisonous. While in the grand picture, 22 is not that many when compared to biological statisticians who commonly work with tens of thousands variables, we still look to reduce the dimensions needed for analysis. 
+
+The first and easiest step is to remove variables that have zero or near zero-variance. As discussed above, we have already done this, and the variable that contains the data with only the `large' variance variables is stored in \texttt{mr\_nzv}
+
+The next best way to reduce the number of variables is to perform a \emph{Principle Component Analysis}. This type of analysis, in effect, will change the basis of the data frame so that the basis vectors of the space are no longer $\{ \vec{e_1}^{\,}, \dots, \vec{e_n}^{\,} \}$ (where $\vec{e_i}^{\,}$ is the standard spanning vector of the $i$-th dimension in Euclidian space), but are the vectors of the eigenvalue decomposition of the data matrix. 
+
+This ensures that the data are linearly transformed in such a way that the spanning vectors of the space are related to the variance that they explain in the data. With PCA, we will get 22 eigenvectors, but we should only consider those eigenvectors whose eigenvalues are greater than 1. So we do that here:
+
+\begin{lstlisting}[language=R, frame=single]
+pr <- PCA( mr_nzv, ncp = dim(mr_nzv)[2])
+
+## take the first components that have
+## eigenvalues greater than 1
+index <- max(which(pr$eig$eigenvalue > 1))
+mr.test <- pr$ind$coord[,1:index]
+mr.test <- as.data.frame(mr.test)
+\end{lstlisting}
+
+Upon inspection, we see that \texttt{index}, which is the number of eigenvalues that are greater than 1, is 5. This means that we should now only have to analyze 5 coordinates, dropping the dimension from 22 to five. We also can see that by these first five vectors can explain 63.19\% of the variance which will be sufficient for this problem.
+
+With this basis, we can plot the data in the first three dimensions and see a revealing picture of the data.
+
+\begin{center}
+\includegraphics[scale=0.35]{PCA}
+\end{center}
+
+We that the first three eigenvectors really do account for the majority of the variance in the data. It also is revealing because it makes it clear that it is much easier to create linear surfaces to separate the classes of mushroom. Again, here we see that green corresponds to poisonous and blue to edible. These two classes of data points are much more evidently separable which will make our jobs much easier when we try to cluster. 
+
+From now on, we will use these PCA-transformed data in our analysis. 
+
+\begin{center}
+\includegraphics[scale=0.35]{PCA2d}
+\end{center}
+
+\section{Clusterings}
+
+\subsection{Preparation}
+We are now going to look at clustering algorithms to try to separate the poisonous and the edible classes. We will use three different clustering methods: \emph{k-means}, \emph{k-nearest neighbor}, and \emph{hierarchical}. 
+
+For each type, we will attempt to break the data into different number of classes: $N$ = 2, 3, 5, and 7. As well, we create training and test datasets of various ratios. 
+
+\subsection{$k$-means}
+
+The k-means algorithm initializes $k$ means and then tries to fit clusters and adjust the means so that the between cluster sum of squares is minimized and the within cluster sum of squares is maximized. We note that $k$-means does not need a training and test for the algorithm to work, but we have developed a method for using a training and test set. First we train the $k$ means on our initial training data. This produces $k$ centers for the means. We then take those means and fit the test data to the means by assigning a point in the cluster to the class of the closest mean. 
+
+The metric that we will use to evaluate how effective the $k$-means clustering algorithm is on the training and test data will be to rely on how similar the clusters are with respect to their components classes. If the clustering algorithm worked well, we want homogenous groups. That is, we want clusters where all the labels are poisonous and clusters where all labels are edible. It doesn't matter how many clusters. So we analyze the between cluster sum of square/total sum of squares to evaluate the efficacy of the clustering. 
+
+Table 1 shows the sum of squares ratio for different training/testing ratios and number of clusters. Table 2 shows the best number of clusters for each method.
+
+\begin{center}
+\begin{table}[]
+\centering
+\label{my-label}
+\caption{$k$-means}
+\begin{tabular}{|cc|c|c|c|c|l}
+\cline{1-6}
+&	&	\multicolumn{4}{ |c | }{$N$=} \\ \cline{1-6}
+&	&	2	&	3 	&       5	&	7       &\\ \cline{1-6}\cline{1-6}
+\multicolumn{2}{ |c|| }{50/50}  & 17.3 & 41.1 & 71.8 & 84.5 &     \\ \cline{1-6}
+\multicolumn{2}{ |c|| }{60/40}  & 17.4 & 38.9 & 70.6 & 74.3 &     \\ \cline{1-6}
+\multicolumn{2}{ |c|| }{70/30}  & 27.0 & 35.2 & 72.9 & 84.7 &     \\ \cline{1-6}
+\end{tabular}
+\end{table}
+
+\begin{table}[]
+\centering
+\caption{$k$-means Cluster Sizes}
+\label{my-label}
+\begin{tabular}{|c|l|l|l|l|l|l|l|l|}
+\hline
+\multicolumn{2}{|c|}{\multirow{2}{*}{}} & \multicolumn{7}{c|}{Group}                 \\ \cline{3-9} 
+\multicolumn{2}{|c|}{}                  & 1   & 2    & 3    & 4   & 5    & 6   & 7   \\ \hline
+\multirow{3}{*}{N=2}       & 50/50      & 530 & 3532 &      &     &      &     &     \\ \cline{2-9} 
+                           & 60/40      & 1512 & 1738 &      &     &      &     &     \\ \cline{2-9} 
+                           & 70/30      & 917 & 1521 &      &     &      &     &     \\ \hline
+\multirow{3}{*}{N=3}       & 50/50      & 980 & 1288  & 1794 &     &      &     &     \\ \cline{2-9} 
+                           & 60/40      & 575 & 698  & 1977 &     &      &     &     \\ \cline{2-9} 
+                           & 70/30      & 321 & 544  & 1573 &     &      &     &     \\ \hline
+\multirow{3}{*}{N=5}       & 50/50      & 326 & 377  & 712  & 902 & 1745 &     &     \\ \cline{2-9} 
+                           & 60/40      & 408 & 594  & 699  & 768 & 781  &     &     \\ \cline{2-9} 
+                           & 70/30      & 311 & 424  & 537  & 567 & 599  &     &     \\ \hline
+\multirow{3}{*}{N=7}       & 50/50      & 312 & 377  & 473  & 483 & 669  & 866 & 882 \\ \cline{2-9} 
+                           & 60/40      & 358 & 358  & 367  & 405 & 527  & 548 & 687 \\ \cline{2-9} 
+                           & 70/30      & 253 & 273  & 279  & 306 & 397  & 400 & 530 \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
+
+The most notable thing of this analysis that as $N$ increases, so does the score of the clustering. We do note that this algorithm's metric does not analyze whether the clusters are homogenous, i.e., the ratio of betweenness sum of squares and total sum of squares does not take into account whether the clusters are entirely filled with poisonous or edible mushrooms. That being said, it does approximate it $k$-means is using the distance metric on the space. The assumption is that the alike mushrooms, e.g. the ones that are edible, are close in distance, and are far from those of dislike mushrooms, the poisonous ones. We have reason to believe this assumption is true, see the 3D figure above to convince yourself of that.
+
+\subsection{$k$-Nearest Neighbors}
+
+The idea of $k$-Nearest Neighbors (knn) is that given a space imbibed with a distance metric will take a training set of data with their a priori labels, along with a number $k$ for which the algorithm will interrogate the $k$ nearest neighbors of a given point to determine what the label of that point should be. After training is completed, the algorithm can attempt to assign labels to a test dataset which does not have labels already attached to it.
+
+We note that this algorithm will not create labels, but will only assign labels that come from the set of possible labels given to it in the training set. In this way, there is no way for us to control the number of clusters the algorithm produces without changing the number of possible labels given to the training data. Now this does not make sense for us to do, given that we are given labels of poisonous or edible. Thus, we will not try to change these and \emph{we understand that we cannot create clusters of size 3, 5, or 7 with knn}. However, we can change $k$ dynamically, so we will produce a matrix where $k$ = 2, 3, 5, and 7. This will be sufficient for our purposes.
+
+The \emph{quality metric} that we use on this algorithm is how many of the test dataset does the algorithm get correct? Our given model score will be accuracy of detection which is defined to be $$\frac{true negative + true positive}{true positive + false positive + false negative + true negative.}$$ With this in mind, we find Table 3 has the accuracy of the algorithm for different $k$ and Table 4 has the group sizes for different $k$ and test/training ratios. We note that Table 4 only has two columns because $k$-NN will only group the test data into 2 classes because it was only given two classes to train on. 
+
+\begin{center}
+\begin{table}[]
+\centering
+\label{my-label}
+\caption{$k$-Nearest Neighbors Accuracy}
+\begin{tabular}{|cc|c|c|c|c|l}
+\cline{1-6}
+&	&	\multicolumn{4}{ |c | }{$k$=} \\ \cline{1-6}
+&	&	2	&	3 	&       5	&	7       &\\ \cline{1-6}\cline{1-6}
+\multicolumn{2}{ |c|| }{50/50}  & 99.7 & 99.8 & 99.6 & 99.5 &     \\ \cline{1-6}
+\multicolumn{2}{ |c|| }{60/40}  & 99.2 & 99.4 & 99.2 & 99.1 &     \\ \cline{1-6}
+\multicolumn{2}{ |c|| }{70/30}  & 99.7 & 99.6 & 99.5 & 99.3 &     \\ \cline{1-6}
+\end{tabular}
+\end{table}
+
+\begin{table}[]
+\centering
+\caption{$k$-Nearest Neighbors Cluster Sizes}
+\label{my-label}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\multicolumn{2}{|c|}{\multirow{2}{*}{}} & \multicolumn{2}{c|}{Group} \\ \cline{3-4} 
+\multicolumn{2}{|c|}{}                  & Edible     & Poisonous     \\ \hline
+\multirow{3}{*}{$k$=2}       & 50/50      & 2098       & 1964          \\ \cline{2-4} 
+                           & 60/40      & 1702       & 1548          \\ \cline{2-4} 
+                           & 70/30      & 1232       & 1206          \\ \hline
+\multirow{3}{*}{$k$=3}       & 50/50      & 2096       & 1966          \\ \cline{2-4} 
+                           & 60/40      & 1704       & 1546          \\ \cline{2-4} 
+                           & 70/30      & 1234       & 1204          \\ \hline
+\multirow{3}{*}{$k$=5}       & 50/50      & 2104       & 1958          \\ \cline{2-4} 
+                           & 60/40      & 1701       & 1543          \\ \cline{2-4} 
+                           & 70/30      & 1237       & 1201          \\ \hline
+\multirow{3}{*}{$k$=7}       & 50/50      & 2101       & 1961          \\ \cline{2-4} 
+                           & 60/40      & 1712       & 1538          \\ \cline{2-4} 
+                           & 70/30      & 1237       & 1201          \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
+
+It is very clear from this that we get very good clustering of the dataset into edible and poisonous dataset from this algorithm, $k$nn. We observe that this doesn't reveal much about the third class of unknown edibility, as it will only remain categorizing the data into two classes. A further discussion of this will happen in the Monte Carlo section.
+
+\subsection{Hierarchical Clustering}
+
+We use Ward's Hierarchical clustering algorithm. Ward's minimum variance method attempts to  minimize the variance within each cluster when summed together. The algorithm start with each element of the dataset as its own cluster. Then, the algorithm will try to cluster these together by iteratively finding the pair of clusters that increases this total within variance the least after merging. The increase is defined to be a weighted squared distance between cluster centers. 
+
+For Hierarchical Clustering, we are able to define the number of clusters the algorithm for separate the data into. Thus, we are fully able to analyze the clustering algorithm for $N=2,3,5,7$.
+
+Again, we will use training and test dataset. This algorithm does not naturally have a test and a training component. However, we bootstrap this and approximate a test/training environment. What we will do is to take the test training set and produce a Hierarchical clustering into $N$ clusters. We then take the centers of those clusters and fit the test data to those centers with a simple Euclidian metric. Once that fit as been done, we asses the betweenness sum of squares as a ratio of the total sum of squares, just as we did in $k$-means. 
+
+Table 5 shows the sum of squares ratio for different training/testing ratios and number of clusters. Table 6 shows the best number of clusters for each method.
+
+
+\begin{center}
+\begin{table}[]
+\centering
+\label{my-label}
+\caption{Hierarchical Clustering}
+\begin{tabular}{|cc|c|c|c|c|l}
+\cline{1-6}
+&	&	\multicolumn{4}{ |c | }{$k$=} \\ \cline{1-6}
+&	&	2	&	3 	&       5	&	7       &\\ \cline{1-6}\cline{1-6}
+\multicolumn{2}{ |c|| }{50/50}  & 20.9 & 30.8 & 43.3 & 47.1 &     \\ \cline{1-6}
+\multicolumn{2}{ |c|| }{60/40}  & 22.0 & 32.5 & 45.9 & 49.2 &     \\ \cline{1-6}
+\multicolumn{2}{ |c|| }{70/30}  & 21.8 & 31.4 & 43.9 & 47.2 &     \\ \cline{1-6}
+\end{tabular}
+\end{table}
+
+\begin{table}[]
+\centering
+\caption{Hierarchical Cluster Sizes}
+\label{my-label}
+\begin{tabular}{|c|l|l|l|l|l|l|l|l|}
+\hline
+\multicolumn{2}{|c|}{\multirow{2}{*}{}} & \multicolumn{7}{c|}{Group}                 \\ \cline{3-9} 
+\multicolumn{2}{|c|}{}                  & 1   & 2    & 3    & 4   & 5    & 6   & 7   \\ \hline
+\multirow{3}{*}{N=2}       & 50/50      & 872 & 3190 &      &     &      &     &     \\ \cline{2-9} 
+                           & 60/40      & 679 & 2571 &      &     &      &     &     \\ \cline{2-9} 
+                           & 70/30      & 561 & 1877 &      &     &      &     &     \\ \hline
+\multirow{3}{*}{N=3}       & 50/50      & 869 & 948  & 2245 &     &      &     &     \\ \cline{2-9} 
+                           & 60/40      & 674 & 775  & 1801 &     &      &     &     \\ \cline{2-9} 
+                           & 70/30      & 558 & 558  & 1322 &     &      &     &     \\ \hline
+\multirow{3}{*}{N=5}       & 50/50      & 386 & 713  & 880  & 928 & 1155 &     &     \\ \cline{2-9} 
+                           & 60/40      & 318 & 577  & 684  & 777 & 894  &     &     \\ \cline{2-9} 
+                           & 70/30      & 227 & 419  & 551  & 565 & 676  &     &     \\ \hline
+\multirow{3}{*}{N=7}       & 50/50      & 310 & 375  & 433  & 507 & 671  & 874 & 892 \\ \cline{2-9} 
+                           & 60/40      & 234 & 307  & 363  & 388 & 543  & 677 & 738 \\ \cline{2-9} 
+                           & 70/30      & 169 & 219  & 287  & 291 & 391  & 522 & 559 \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
+
+\end{document}
